@@ -1,10 +1,10 @@
-import os
+from os import listdir
 from PIL import Image
 from io import BytesIO
 from PyPDF4 import PdfFileMerger, PdfFileReader
 from natsort import natsorted
 
-image_files = natsorted([file for file in os.listdir('.') if file.endswith(
+image_files = natsorted([file for file in listdir('.') if file.endswith(
     '.jpg') or file.endswith('.png') or file.endswith('.gif')])
 
 pdf_merger = PdfFileMerger()
