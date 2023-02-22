@@ -10,6 +10,9 @@ import javax.imageio.ImageWriter;
 import javax.imageio.stream.FileImageOutputStream;
 import javax.swing.*;
 import java.awt.*;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import java.awt.event.KeyEvent;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.text.SimpleDateFormat;
@@ -19,6 +22,8 @@ import java.util.Iterator;
 public class ScreenCaptureGUI implements NativeKeyListener {
     private JFrame frame;
     private JLabel imageLabel;
+    private boolean isCapturing;
+    private Timer timer;
 
     public ScreenCaptureGUI() {
         frame = new JFrame("Screen Capture");
@@ -40,15 +45,41 @@ public class ScreenCaptureGUI implements NativeKeyListener {
         frame.setVisible(true);
     }
 
-    public void nativeKeyPressed(NativeKeyEvent e) {
-        if (e.getKeyCode() == NativeKeyEvent.VC_C && e.getModifiers() == NativeKeyEvent.CTRL_L_MASK) {
-            captureScreen();
+    private void keyFunction1(NativeKeyEvent e) {
+        captureScreen();
+
+        try {
+            Robot robot = new Robot();
+            robot.keyPress(KeyEvent.VK_RIGHT);
+            robot.keyRelease(KeyEvent.VK_RIGHT);
+        } catch (AWTException ex) {
+            ex.printStackTrace();
         }
+    }
+    public void nativeKeyPressed(NativeKeyEvent e) {
+        if (e.getKeyCode() == NativeKeyEvent.VC_C) {
+            keyFunction1(e);
+        }
+
+        if (e.getKeyCode() == NativeKeyEvent.VC_S && e.getModifiers() == NativeKeyEvent.CTRL_L_MASK) {
+            isCapturing = true;
+            timer = new Timer(800, new ActionListener() {
+                public void actionPerformed(ActionEvent evt) {
+                    keyFunction1(e);
+                }
+            });
+            timer.start();
+        } else if (e.getKeyCode() == NativeKeyEvent.VC_Q && e.getModifiers() == NativeKeyEvent.CTRL_L_MASK) {
+            isCapturing = false;
+            timer.stop();
+        }
+    }
+
+    public void nativeKeyReleased(NativeKeyEvent e) {
     }
 
     public void nativeKeyTyped(NativeKeyEvent e) {}
 
-    public void nativeKeyReleased(NativeKeyEvent e) {}
 
     private void captureScreen() {
         try {
