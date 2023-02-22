@@ -18,14 +18,19 @@ import java.io.File;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Iterator;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.LinkedBlockingQueue;
 
 public class ScreenCaptureGUI implements NativeKeyListener {
     private JFrame frame;
     private JLabel imageLabel;
     private boolean isCapturing;
     private Timer timer;
+    private BlockingQueue<BufferedImage> imageQueue;
 
-    public ScreenCaptureGUI() {
+    Robot robot = new Robot();
+
+    public ScreenCaptureGUI() throws AWTException {
         frame = new JFrame("Screen Capture");
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         frame.setSize(300, 150);
@@ -45,6 +50,40 @@ public class ScreenCaptureGUI implements NativeKeyListener {
         buttonPanel.add(explainButton3);
         frame.add(buttonPanel, BorderLayout.WEST);
 
+        // Create the blocking queue
+        imageQueue = new LinkedBlockingQueue<>();
+
+        // Start the writer thread
+        Thread writerThread = new Thread(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    while (true) {
+                        BufferedImage image = imageQueue.take(); // retrieve the image from the blocking queue
+
+                        SimpleDateFormat dateFormat = new SimpleDateFormat("yyyyMMdd_HHmmss");
+                        String fileName = "screenshot_" + dateFormat.format(new Date()) + ".jpeg";
+                        File output = new File(fileName);
+
+                        Iterator<ImageWriter> iter = ImageIO.getImageWritersByFormatName("jpeg");
+                        ImageWriter writer = iter.next();
+                        ImageWriteParam iwp = writer.getDefaultWriteParam();
+                        iwp.setCompressionMode(ImageWriteParam.MODE_EXPLICIT);
+                        iwp.setCompressionQuality(1.0f);
+
+                        FileImageOutputStream outputImage = new FileImageOutputStream(output);
+                        writer.setOutput(outputImage);
+                        writer.write(null, new IIOImage(image, null, null), iwp);
+
+                        System.out.println("Image saved to file: " + fileName);
+                    }
+                } catch (Exception ex) {
+                    ex.printStackTrace();
+                }
+            }
+        });
+        writerThread.start();
+
         try {
             GlobalScreen.registerNativeHook();
             GlobalScreen.addNativeKeyListener(this);
@@ -55,17 +94,10 @@ public class ScreenCaptureGUI implements NativeKeyListener {
         frame.setVisible(true);
     }
 
-
     private void keyFunction1(NativeKeyEvent e) {
         captureScreen();
-
-        try {
-            Robot robot = new Robot();
-            robot.keyPress(KeyEvent.VK_RIGHT);
-            robot.keyRelease(KeyEvent.VK_RIGHT);
-        } catch (AWTException ex) {
-            ex.printStackTrace();
-        }
+        robot.keyPress(KeyEvent.VK_RIGHT);
+        robot.keyRelease(KeyEvent.VK_RIGHT);
     }
     public void nativeKeyPressed(NativeKeyEvent e) {
         if (e.getKeyCode() == NativeKeyEvent.VC_C) {
@@ -83,45 +115,25 @@ public class ScreenCaptureGUI implements NativeKeyListener {
         } else if (e.getKeyCode() == NativeKeyEvent.VC_Q && e.getModifiers() == NativeKeyEvent.CTRL_L_MASK) {
             isCapturing = false;
             timer.stop();
+            System.out.println("Stop Screen Capture");
         }
     }
-
-    public void nativeKeyReleased(NativeKeyEvent e) {
-    }
-
-    public void nativeKeyTyped(NativeKeyEvent e) {}
-
 
     private void captureScreen() {
         try {
             Rectangle screenRect = new Rectangle(Toolkit.getDefaultToolkit().getScreenSize());
             BufferedImage capture = new Robot().createScreenCapture(screenRect);
 
-            SimpleDateFormat dateFormat = new SimpleDateFormat("yyyyMMdd_HHmmss");
-            String fileName = "screenshot_" + dateFormat.format(new Date()) + ".jpeg";
+            imageQueue.put(capture); // add the image to the blocking queue
 
-            File output = new File(fileName);
-
-            Iterator<ImageWriter> iter = ImageIO.getImageWritersByFormatName("jpeg");
-            ImageWriter writer = iter.next();
-            ImageWriteParam iwp = writer.getDefaultWriteParam();
-            iwp.setCompressionMode(ImageWriteParam.MODE_EXPLICIT);
-            iwp.setCompressionQuality(1.0f);
-
-            FileImageOutputStream outputImage = new FileImageOutputStream(output);
-            writer.setOutput(outputImage);
-            writer.write(null, new IIOImage(capture, null, null), iwp);
-
-            ImageIcon icon = new ImageIcon(capture);
-            imageLabel.setIcon(icon);
-
-            System.out.println("Screen captured successfully: " + fileName);
+            System.out.println("Screen captured successfully");
         } catch (Exception ex) {
             ex.printStackTrace();
         }
     }
 
-    public static void main(String[] args) {
+
+    public static void main(String[] args) throws AWTException {
         new ScreenCaptureGUI();
     }
 }
