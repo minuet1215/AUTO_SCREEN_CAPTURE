@@ -10,76 +10,77 @@ import javax.imageio.ImageWriter;
 import javax.imageio.stream.FileImageOutputStream;
 import javax.swing.*;
 import java.awt.*;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
 import java.awt.event.KeyEvent;
 import java.awt.image.BufferedImage;
 import java.io.File;
-import java.text.SimpleDateFormat;
-import java.util.Date;
 import java.util.Iterator;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 
 public class ScreenCaptureGUI implements NativeKeyListener {
-    private JFrame frame;
-    private JLabel imageLabel;
-    private boolean isCapturing;
     private Timer timer;
-    private BlockingQueue<BufferedImage> imageQueue;
+    private final BlockingQueue<BufferedImage> imageQueue;
+    private JTextField timerDelayField;
 
     Robot robot = new Robot();
 
     public ScreenCaptureGUI() throws AWTException {
-        frame = new JFrame("Screen Capture");
+        timerDelayField = new JTextField("500");
+        JFrame frame = new JFrame("Screen Capture");
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         frame.setSize(300, 150);
         frame.setLayout(new BorderLayout());
 
-        imageLabel = new JLabel();
+        JLabel imageLabel = new JLabel();
         imageLabel.setHorizontalAlignment(JLabel.CENTER);
         frame.add(imageLabel, BorderLayout.CENTER);
 
         JPanel buttonPanel = new JPanel();
         buttonPanel.setLayout(new BoxLayout(buttonPanel, BoxLayout.Y_AXIS));
-        JButton explainButton1 = new JButton("press 'C' = Capture");
-        JButton explainButton2 = new JButton("press 'L_control+S' = Auto Capture Start");
-        JButton explainButton3 = new JButton("press 'L_control+Q' = Stop Capturing");
+        JLabel explainButton1 = new JLabel("press 'C' = Capture");
+        JLabel explainButton2 = new JLabel("press 'L_control+S' = Auto Capture Start");
+        JLabel explainButton3 = new JLabel("press 'L_control+Q' = Stop Capturing");
+
         buttonPanel.add(explainButton1);
         buttonPanel.add(explainButton2);
         buttonPanel.add(explainButton3);
+
+        JPanel textPanel = new JPanel();
+        JLabel timerDelayFieldLabel = new JLabel("시간 입력 (단위: ms)");
+        textPanel.add(timerDelayFieldLabel);
+        textPanel.add(timerDelayField);
+
         frame.add(buttonPanel, BorderLayout.WEST);
+        frame.add(textPanel, BorderLayout.SOUTH);
 
         // Create the blocking queue
         imageQueue = new LinkedBlockingQueue<>();
 
         // Start the writer thread
-        Thread writerThread = new Thread(new Runnable() {
-            @Override
-            public void run() {
-                try {
-                    while (true) {
-                        BufferedImage image = imageQueue.take(); // retrieve the image from the blocking queue
+        Thread writerThread = new Thread(() -> {
+            try {
+                int index = 1;
+                while (true) {
+                    BufferedImage image = imageQueue.take(); // retrieve the image from the blocking queue
 
-                        SimpleDateFormat dateFormat = new SimpleDateFormat("yyyyMMdd_HHmmss");
-                        String fileName = "screenshot_" + dateFormat.format(new Date()) + ".jpeg";
-                        File output = new File(fileName);
+                    String fileName = "screenshot_" + index + ".jpeg";
+                    File output = new File(fileName);
 
-                        Iterator<ImageWriter> iter = ImageIO.getImageWritersByFormatName("jpeg");
-                        ImageWriter writer = iter.next();
-                        ImageWriteParam iwp = writer.getDefaultWriteParam();
-                        iwp.setCompressionMode(ImageWriteParam.MODE_EXPLICIT);
-                        iwp.setCompressionQuality(1.0f);
+                    Iterator<ImageWriter> iter = ImageIO.getImageWritersByFormatName("jpeg");
+                    ImageWriter writer = iter.next();
+                    ImageWriteParam iwp = writer.getDefaultWriteParam();
+                    iwp.setCompressionMode(ImageWriteParam.MODE_EXPLICIT);
+                    iwp.setCompressionQuality(1.0f);
 
-                        FileImageOutputStream outputImage = new FileImageOutputStream(output);
-                        writer.setOutput(outputImage);
-                        writer.write(null, new IIOImage(image, null, null), iwp);
+                    FileImageOutputStream outputImage = new FileImageOutputStream(output);
+                    writer.setOutput(outputImage);
+                    writer.write(null, new IIOImage(image, null, null), iwp);
 
-                        System.out.println("Image saved to file: " + fileName);
-                    }
-                } catch (Exception ex) {
-                    ex.printStackTrace();
+                    System.out.println("Image saved to file: " + fileName);
+                    index++;
                 }
+            } catch (Exception ex) {
+                ex.printStackTrace();
             }
         });
         writerThread.start();
@@ -94,26 +95,21 @@ public class ScreenCaptureGUI implements NativeKeyListener {
         frame.setVisible(true);
     }
 
-    private void keyFunction1(NativeKeyEvent e) {
+    private void keyFunction1() {
         captureScreen();
         robot.keyPress(KeyEvent.VK_RIGHT);
         robot.keyRelease(KeyEvent.VK_RIGHT);
     }
     public void nativeKeyPressed(NativeKeyEvent e) {
         if (e.getKeyCode() == NativeKeyEvent.VC_C) {
-            keyFunction1(e);
+            keyFunction1();
         }
 
         if (e.getKeyCode() == NativeKeyEvent.VC_S && e.getModifiers() == NativeKeyEvent.CTRL_L_MASK) {
-            isCapturing = true;
-            timer = new Timer(1000, new ActionListener() {
-                public void actionPerformed(ActionEvent evt) {
-                    keyFunction1(e);
-                }
-            });
+            int delay = Integer.parseInt(timerDelayField.getText());
+            timer = new Timer(delay, evt -> keyFunction1());
             timer.start();
         } else if (e.getKeyCode() == NativeKeyEvent.VC_Q && e.getModifiers() == NativeKeyEvent.CTRL_L_MASK) {
-            isCapturing = false;
             timer.stop();
             System.out.println("Stop Screen Capture");
         }
