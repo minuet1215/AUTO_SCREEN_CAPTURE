@@ -28,12 +28,22 @@ public class ScreenCaptureGUI implements NativeKeyListener {
     public ScreenCaptureGUI() {
         frame = new JFrame("Screen Capture");
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        frame.setSize(800, 600);
+        frame.setSize(300, 150);
         frame.setLayout(new BorderLayout());
 
         imageLabel = new JLabel();
         imageLabel.setHorizontalAlignment(JLabel.CENTER);
         frame.add(imageLabel, BorderLayout.CENTER);
+
+        JPanel buttonPanel = new JPanel();
+        buttonPanel.setLayout(new BoxLayout(buttonPanel, BoxLayout.Y_AXIS));
+        JButton explainButton1 = new JButton("press 'C' = Capture");
+        JButton explainButton2 = new JButton("press 'L_control+S' = Auto Capture Start");
+        JButton explainButton3 = new JButton("press 'L_control+Q' = Stop Capturing");
+        buttonPanel.add(explainButton1);
+        buttonPanel.add(explainButton2);
+        buttonPanel.add(explainButton3);
+        frame.add(buttonPanel, BorderLayout.WEST);
 
         try {
             GlobalScreen.registerNativeHook();
@@ -44,6 +54,7 @@ public class ScreenCaptureGUI implements NativeKeyListener {
 
         frame.setVisible(true);
     }
+
 
     private void keyFunction1(NativeKeyEvent e) {
         captureScreen();
