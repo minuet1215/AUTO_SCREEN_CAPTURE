@@ -74,7 +74,7 @@ public class ScreenCaptureGUI implements NativeKeyListener {
 
         if (e.getKeyCode() == NativeKeyEvent.VC_S && e.getModifiers() == NativeKeyEvent.CTRL_L_MASK) {
             isCapturing = true;
-            timer = new Timer(800, new ActionListener() {
+            timer = new Timer(1000, new ActionListener() {
                 public void actionPerformed(ActionEvent evt) {
                     keyFunction1(e);
                 }
