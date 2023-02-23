@@ -53,16 +53,13 @@ public class ScreenCaptureGUI implements NativeKeyListener {
         frame.add(buttonPanel, BorderLayout.WEST);
         frame.add(textPanel, BorderLayout.SOUTH);
 
-        // Create the blocking queue
         imageQueue = new LinkedBlockingQueue<>();
 
-        // Start the writer thread
         Thread writerThread = new Thread(() -> {
             try {
                 int index = 1;
                 while (true) {
-                    BufferedImage image = imageQueue.take(); // retrieve the image from the blocking queue
-
+                    BufferedImage image = imageQueue.take();
                     String fileName = "screenshot_" + index + ".jpeg";
                     File output = new File(fileName);
 
@@ -120,8 +117,8 @@ public class ScreenCaptureGUI implements NativeKeyListener {
             Rectangle screenRect = new Rectangle(Toolkit.getDefaultToolkit().getScreenSize());
             BufferedImage capture = new Robot().createScreenCapture(screenRect);
 
-            imageQueue.put(capture); // add the image to the blocking queue
-
+            imageQueue.put(capture);
+            
             System.out.println("Screen captured successfully");
         } catch (Exception ex) {
             ex.printStackTrace();
